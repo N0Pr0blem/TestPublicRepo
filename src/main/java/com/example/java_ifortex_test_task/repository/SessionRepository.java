@@ -1,6 +1,5 @@
 package com.example.java_ifortex_test_task.repository;
 
-import com.example.java_ifortex_test_task.entity.DeviceType;
 import com.example.java_ifortex_test_task.entity.Session;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,9 +8,30 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface SessionRepository extends JpaRepository<Session, Long> {
-    @Query(value = "", nativeQuery = true)
-    Session getFirstDesktopSession(DeviceType deviceType);
+    @Query(value = """
+            SELECT s.id as id,
+                   s.device_type as deviceTypeCode,
+                   s.ended_at_utc as endedAtUtc,
+                   s.started_at_utc as startedAtUtc,
+                   s.user_id as userId FROM sessions s
+            WHERE s.device_type=?1
+            ORDER BY s.started_at_utc ASC
+            LIMIT 1;
+            """, nativeQuery = true)
+    SessionDBResponse getFirstSessionOfDeviceTypeCode(int code);
 
-    @Query(value = "", nativeQuery = true)
-    List<Session> getSessionsFromActiveUsersEndedBefore2025(LocalDateTime endDate);
+    @Query(value = """
+            SELECT s.id as id,
+                   s.device_type as deviceTypeCode,
+                   s.ended_at_utc as endedAtUtc,
+                   s.started_at_utc as startedAtUtc,
+                   s.user_id as userId FROM sessions s
+            JOIN users u ON u.id=s.user_id
+            WHERE u.deleted=false
+            AND s.ended_at_utc IS NOT NULL
+            AND s.ended_at_utc<:endDate
+            ORDER BY s.ended_at_utc DESC;
+            """, nativeQuery = true)
+    List<SessionDBResponse> getSessionsFromActiveUsersEndedBeforeEndTime(LocalDateTime endDate);
 }
+
